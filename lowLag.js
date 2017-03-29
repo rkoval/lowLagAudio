@@ -11,6 +11,8 @@ var lowLag = new function(){
 	this.suspendDelay = 10000; // ten seconds
 	this.suspendTimeout = null;
 	this.suspended = false;
+    // currently used via https://developer.mozilla.org/en-US/docs/Web/API/AudioBufferSourceNode/playbackRate
+    this.playbackRate = 1;
 
 	this.audioTagTimeToLive = 5000;
 
@@ -242,7 +244,7 @@ this.audioContextPendingRequest = {};
 		}
 	}
 
-	this.playSoundAudioContext= function(tag){
+	this.playSoundAudioContext= function(tag, playbackEndedCallback){
 		lowLag.msg("playSoundAudioContext "+tag);
 		var buffer = lowLag.audioBuffers[tag];
 		if(buffer == undefined) { //possibly not loaded; put in a request to play onload
@@ -254,6 +256,10 @@ this.audioContextPendingRequest = {};
 			this.resumePlaybackAudioContext(); // Resume playback
 		}
 		var source = context.createBufferSource(); // creates a sound source
+        source.playbackRate.value = lowLag.playbackRate;
+        if (playbackEndedCallback) {
+          source.addEventListener('ended', playbackEndedCallback);
+        }
 		source.buffer = buffer;                    // tell the source which sound to play
 		source.connect(context.destination);       // connect the source to the context's destination (the speakers)
 		if (typeof(source.noteOn) == "function") {
@@ -329,7 +335,7 @@ this.audioContextPendingRequest = {};
 		document.body.appendChild(audioElem);
 	}
 
-	this.playSoundAudioTag = function(tag){
+	this.playSoundAudioTag = function(tag, playbackEndedCallback){
 		lowLag.msg("playSoundAudioTag "+tag);
 
 		var modelId = lowLag.audioTagNameToElement[tag];
@@ -337,6 +343,7 @@ this.audioContextPendingRequest = {};
 		
 		var modelElem = document.getElementById(modelId);
 		var cloneElem = modelElem.cloneNode(true);
+        cloneElem.playbackRate = lowLag.playbackRate;
 		cloneElem.setAttribute("id",cloneId);
 		this.divLowLag.appendChild(cloneElem);
 		lowLag.msg(tag);
@@ -345,6 +352,9 @@ this.audioContextPendingRequest = {};
 					lowLag.safelyRemoveElement(cloneElem);
 				},lowLag.audioTagTimeToLive);
 		}
+        if (playbackEndedCallback) {
+          cloneElem.addEventListener("ended", playbackEndedCallback);
+        }
 		cloneElem.play();
 		
 	}
